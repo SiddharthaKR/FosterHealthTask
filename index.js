@@ -34,13 +34,10 @@ app.post("/submit", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    console.log("Opening form");
 
     // Navigate to the form URL
     await page.goto(formLink, { waitUntil: "networkidle2" });
     const title = await page.$eval("title", (el) => el.textContent);
-    console.log("form opened");
-    console.log("Form Title: " + title);
 
     // Wait for the selector to load
     await page.waitForSelector(PARENT_INPUT_DIV_CLASS);
