@@ -1,10 +1,10 @@
-// server.js
 const express = require("express");
 const puppeteer = require("puppeteer");
 const path = require("path");
 const { SANDBOX_SELECTION, SUBMIT_BUTTON_CLASS, PARENT_INPUT_DIV_CLASS } = require("./constants");
 
 const app = express();
+let successMessage = false;
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -37,7 +37,6 @@ app.post("/submit", async (req, res) => {
 
     // Navigate to the form URL
     await page.goto(formLink, { waitUntil: "networkidle2" });
-    const title = await page.$eval("title", (el) => el.textContent);
 
     // Wait for the selector to load
     await page.waitForSelector(PARENT_INPUT_DIV_CLASS);
@@ -45,38 +44,36 @@ app.post("/submit", async (req, res) => {
     // Get all the inputDivs with class name PARENT_INPUT_DIV_CLASS
     const inputDivs = await page.$$(PARENT_INPUT_DIV_CLASS);
 
-    // Loop through each inputDiv and determine its type (short answer or multiple choice)
+    // Loop through each inputDivs and determine its type (short answer or multiple choice)
     for (const inputDiv of inputDivs) {
       const span = await inputDiv.$("span"); // Check if there's a <span> inside the inputDiv
       const inputField = await inputDiv.$('input[type="text"]'); // Check for a text input field
       const checkbox = await inputDiv.$('div[role="checkbox"]'); // Check for a checkbox
+      
       if (checkbox) {
         // This is a "multiple choice" field
         await checkbox?.click();
       } else {
         // This is a "short answer" field
-        const fieldName = await span.evaluate((el) => el.textContent);
+        const fieldName = await span?.evaluate((el) => el.textContent);
         await inputField?.type(`Hello ${fieldName}`);
       }
     }
 
-
+    // Click the submit button
     await page.click(SUBMIT_BUTTON_CLASS);
     await page.waitForNavigation();
     const submissionPage = await page.url();
     if (submissionPage.includes("formResponse")) {
+      successMessage=true
       console.log("Form Submitted Successfully");
     }
-
     await page.close();
     await browser.close();
-
+    res.send('success')
   } catch (error) {
     console.error("An error occurred:", error);
   }
-
-  // Redirect back to the form page
-  res.redirect("/");
 });
 
 const PORT = process.env.PORT || 3000;
